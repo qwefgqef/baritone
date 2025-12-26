@@ -1,27 +1,33 @@
 package baritone.fabric;
 
-import baritone.api.BaritoneAPI;
 import baritone.api.event.events.WorldEvent;
-import baritone.api.event.events.WorldEvent.EventState;
+import baritone.api.event.listener.IGameEventListener;
+import baritone.api.event.listener.IEventBus;
+import baritone.api.BaritoneAPI;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-public final class WorldLoadHello {
+public final class WorldLoadHello implements IGameEventListener {
 
     private static boolean shown = false;
 
     public static void init() {
-        BaritoneAPI.getProvider()
+        IEventBus bus = BaritoneAPI.getProvider()
                 .getPrimaryBaritone()
-                .getGameEventHandler()
-                .registerEventListener(event -> {
-                    if (event instanceof WorldEvent worldEvent) {
-                        if (worldEvent.getState() == EventState.POST && !shown) {
-                            shown = true;
-                            sendHello();
-                        }
-                    }
-                });
+                .getGameEventHandler();
+
+        bus.registerEventListener(new WorldLoadHello());
+    }
+
+    @Override
+    public void onWorldEvent(WorldEvent event) {
+        if (shown) return;
+
+        // WorldEvent fires when world becomes non-null
+        if (Minecraft.getInstance().level != null) {
+            shown = true;
+            sendHello();
+        }
     }
 
     private static void sendHello() {
@@ -29,9 +35,10 @@ public final class WorldLoadHello {
         if (mc.player == null) return;
 
         mc.player.sendSystemMessage(
-            Component.Serializer.fromJson(
-                "{\"text\":\"HELLO WORLD\",\"bold\":true,\"color\":\"gold\"}"
-            )
+            Component.literal("HELLO WORLD")
+                .withStyle(style -> style
+                    .withBold(true)
+                )
         );
     }
 }
